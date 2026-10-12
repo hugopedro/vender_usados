@@ -1,0 +1,46 @@
+{
+  "publicacoes": [
+    {
+      "item": "celular",
+      "ad_id": 1815195164,
+      "list_id": "1541197191",
+      "titulo": "Celular Smartphone Samsung Galaxy S23",
+      "data": "2026-10-04T11:56:01"
+    },
+    {
+      "item": "celular",
+      "ad_id": 1817620209,
+      "list_id": "1543622275",
+      "titulo": "Celular Smartphone Samsung Galaxy S23",
+      "data": "2026-10-12T14:31:03"
+    },
+    {
+      "item": "ventilador",
+      "ad_id": 1815193992,
+      "list_id": "1541196019",
+      "titulo": "Ventilador Mondial Torre Semi Novo",
+      "data": "2026-10-04T11:44:46"
+    },
+    {
+      "item": "ventilador",
+      "ad_id": 1817622805,
+      "list_id": "1543624871",
+      "titulo": "Ventilador Mondial Torre Semi Novo",
+      "data": "2026-10-12T14:45:14"
+    },
+    {
+      "item": "fone",
+      "ad_id": 1815194787,
+      "list_id": "1541196814",
+      "titulo": "Headset Headphone Fone JBL Quantum 400",
+      "data": "2026-10-04T11:52:11"
+    },
+    {
+      "item": "fone",
+      "ad_id": 1817625123,
+      "list_id": "1543627092",
+      "titulo": "Headset Headphone Fone JBL Quantum 400",
+      "data": "2026-10-12T15:01:06"
+    }
+  ]
+}

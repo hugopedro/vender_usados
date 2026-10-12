@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary cookie databases extracted from Firefox
+temp_fb_*.sqlite*
+pw_*.sqlite*
+*.sqlite-wal
+*.sqlite-shm
+
+# Environments & secrets
+.env
+.env.*
+venv/
+.venv/
+env/
+
+# Screenshots & tests artifacts
+*.png
+*.jpg.tmp
+*.log
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
