@@ -20,6 +20,7 @@ vender_usados/
 │   ├── celular/                         # Metadados, fotos e tags do celular
 │   ├── ventilador/                      # Metadados, fotos e tags do ventilador
 │   ├── fone/                            # Metadados, fotos e tags do fone
+│   ├── memoria/                         # Metadados, foto e tags da Memória RAM Kingston 8GB DDR4
 │   └── republicar_marketplace.py        # Automação via Playwright Chromium + Stealth
 │
 ├── .gitignore
@@ -62,9 +63,9 @@ Automação desenvolvida em **Playwright (Chromium)** conectada aos cookies da s
 - **Preenchimento Completo de Atributos:**
   - **Título, Preço e Fotos locais**
   - **Categoria e Condição** (*Usado — em boas condições* ou *Usado — estado de novo*)
-  - **Marca e Seleção de Cor** em dropdown (*Branco* para o celular)
+  - **Marca e Seleção de Cor** em dropdown (*Branco* para o celular; *Kingston* para a memória)
   - **Etiquetas de Produto** (até 20 tags geradas dinamicamente)
-  - **Preferências de Encontro:** *Encontro público* (celular e fone) ou *Retirada* (ventilador)
+  - **Preferências de Encontro:** *Encontro público* (celular, fone, memória) ou *Retirada* (ventilador)
   - **Privacidade:** Ativação automática do switch *Ocultar para os amigos*
 - **Exclusão Limpa:** Localiza o anúncio antigo em 'Seus classificados' e remove antes de republicar o novo.
 
@@ -72,11 +73,11 @@ Automação desenvolvida em **Playwright (Chromium)** conectada aos cookies da s
 ```powershell
 cd marketplace
 
-# Menu interativo (1 = Celular, 2 = Ventilador, 3 = Fone)
+# Menu interativo (1 = Celular, 2 = Ventilador, 3 = Fone, 4 = Memória RAM)
 python republicar_marketplace.py
 
 # Simulação segura
-python republicar_marketplace.py 1 --dry-run
+python republicar_marketplace.py 4 --dry-run
 ```
 
 ---

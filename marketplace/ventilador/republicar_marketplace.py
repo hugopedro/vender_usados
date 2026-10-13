@@ -67,6 +67,18 @@ ITENS_CONFIG = {
         "cor": "Preto",
         "encontro": "Encontro público",
         "ocultar_amigos": True,
+    },
+    "memoria": {
+        "nome": "Memoria RAM 8GB DDR4",
+        "pasta": "memoria",
+        "keywords": ["memoria", "ram", "ddr4", "kingston", "8gb"],
+        "categoria": "Eletrônicos e informática",
+        "condicao": "Usado — estado de novo",
+        "marca": "Kingston",
+        "compativel": None,
+        "cor": None,
+        "encontro": "Encontro público",
+        "ocultar_amigos": True,
     }
 }
 
@@ -111,12 +123,12 @@ def human_click(locator, page, fast=False):
 def find_marketplace_base_dir():
     """Identifica o diretório raiz do experimento Marketplace."""
     curr = os.path.abspath(os.getcwd())
-    if os.path.basename(curr) in ("celular", "ventilador", "fone"):
+    if os.path.basename(curr) in ("celular", "ventilador", "fone", "memoria"):
         return os.path.dirname(curr)
     if os.path.isdir(os.path.join(curr, "celular")):
         return curr
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    if os.path.basename(script_dir) in ("celular", "ventilador", "fone"):
+    if os.path.basename(script_dir) in ("celular", "ventilador", "fone", "memoria"):
         return os.path.dirname(script_dir)
     return script_dir
 
@@ -198,6 +210,8 @@ def choose_item(item_arg):
             return "ventilador"
         if key in ("3", "fone", "headset", "headphone", "jbl", "quantum"):
             return "fone"
+        if key in ("4", "mem", "memoria", "ram", "ddr4", "kingston"):
+            return "memoria"
         print(f"[!] Opção '{item_arg}' não reconhecida. Escolha abaixo:")
 
     cwd_name = os.path.basename(os.getcwd()).lower()
@@ -208,13 +222,16 @@ def choose_item(item_arg):
         default_choice = "2"
     elif cwd_name == "fone":
         default_choice = "3"
+    elif cwd_name == "memoria":
+        default_choice = "4"
 
     print("\n[?] Qual item você deseja republicar no Facebook Marketplace?")
     print("  1) Celular (Samsung Galaxy S23)")
     print("  2) Ventilador (Mondial Torre Semi Novo)")
     print("  3) Fone (Headset JBL Quantum 400)")
+    print("  4) Memória RAM (Kingston 8GB DDR4)")
 
-    choice = input(f"\nEscolha a opção (1, 2 ou 3) [Padrão: {default_choice}]: ").strip()
+    choice = input(f"\nEscolha a opção (1, 2, 3 ou 4) [Padrão: {default_choice}]: ").strip()
     if not choice:
         choice = default_choice
 
@@ -224,6 +241,8 @@ def choose_item(item_arg):
         return "ventilador"
     elif choice in ("3", "fone"):
         return "fone"
+    elif choice in ("4", "memoria", "ram"):
+        return "memoria"
     else:
         print("Opção inválida. Selecionando Celular por padrão.")
         return "celular"
@@ -622,9 +641,9 @@ def publish_new_ad(page, item_data, fast=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Excluir e republicar anúncio no Facebook Marketplace (Celular, Ventilador ou Fone)")
-    parser.add_argument("item", nargs="?", default=None, help="Item para republicar: 'celular', 'ventilador' ou 'fone'")
-    parser.add_argument("--item", "-i", dest="item_opt", default=None, help="Item para republicar: 'celular', 'ventilador' ou 'fone'")
+    parser = argparse.ArgumentParser(description="Excluir e republicar anúncio no Facebook Marketplace (Celular, Ventilador, Fone ou Memória RAM)")
+    parser.add_argument("item", nargs="?", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone' ou 'memoria'")
+    parser.add_argument("--item", "-i", dest="item_opt", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone' ou 'memoria'")
     parser.add_argument("--yes", "-y", action="store_true", help="Executar sem pedir confirmação interativa")
     parser.add_argument("--dry-run", action="store_true", help="Apenas preencher o formulário sem excluir ou publicar")
     parser.add_argument("--headed", action="store_true", help="Executar com janela do navegador visível")

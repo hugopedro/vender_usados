@@ -20,6 +20,7 @@ env/
 *.png
 *.jpg.tmp
 *.log
+backup_anuncio_antigo.json
 
 # OS & IDE
 .DS_Store
