@@ -12,6 +12,7 @@ vender_usados/
 │   ├── celular/                         # Celular Samsung Galaxy S23 (5 anúncios grátis/mês)
 │   ├── ventilador/                      # Ventilador Mondial Torre (20 anúncios grátis/mês)
 │   ├── fone/                            # Headset JBL Quantum 400 (20 anúncios grátis/mês)
+│   ├── memoria/                         # Memória RAM Kingston 8GB DDR4 (20 anúncios grátis/mês)
 │   ├── republicar_anuncio.py            # Automação via API direta da OLX + Gestão de Cotas
 │   ├── historico_cotas.json             # Histórico e saldo de cotas de anúncios gratuitos
 │   └── ESTRATEGIA_REPUBLICACAO_OUTUBRO_2026.md # Planejamento estratégico de reupagem
