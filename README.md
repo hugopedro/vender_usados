@@ -22,7 +22,9 @@ vender_usados/
 │   ├── ventilador/                      # Metadados, fotos e tags do ventilador
 │   ├── fone/                            # Metadados, fotos e tags do fone
 │   ├── memoria/                         # Metadados, foto e tags da Memória RAM Kingston 8GB DDR4
-│   └── republicar_marketplace.py        # Automação via Playwright Chromium + Stealth
+│   ├── republicar_marketplace.py        # Automação individual via Playwright Chromium + Stealth
+│   ├── republicar_tudo.py               # Republicador sequencial em lote dos 4 itens (sem confirmações)
+│   └── republicar_tudo.bat              # Atalho executável para o republicar_tudo.py
 │
 ├── .gitignore
 └── README.md
@@ -69,16 +71,22 @@ Automação desenvolvida em **Playwright (Chromium)** conectada aos cookies da s
   - **Preferências de Encontro:** *Encontro público* (celular, fone, memória) ou *Retirada* (ventilador)
   - **Privacidade:** Ativação automática do switch *Ocultar para os amigos*
 - **Exclusão Limpa:** Localiza o anúncio antigo em 'Seus classificados' e remove antes de republicar o novo.
+- **Modo em Lote Sequencial:** Executa todos os 4 itens em sequência com intervalo de proteção anti-spam, sem solicitar confirmação manual.
 
 ### Como Executar:
 ```powershell
 cd marketplace
 
-# Menu interativo (1 = Celular, 2 = Ventilador, 3 = Fone, 4 = Memória RAM)
-python republicar_marketplace.py
+# Republicar TODOS os 4 anúncios em sequência (sem perguntas s/N)
+python republicar_tudo.py
+# ou:
+.\republicar_tudo.bat
 
-# Simulação segura
-python republicar_marketplace.py 4 --dry-run
+# Simulação segura de todos os 4 itens
+python republicar_tudo.py --dry-run
+
+# Republicar item individual via menu interativo (1 = Celular, 2 = Ventilador, 3 = Fone, 4 = Memória)
+python republicar_marketplace.py
 ```
 
 ---
