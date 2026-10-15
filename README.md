@@ -13,7 +13,9 @@ vender_usados/
 │   ├── ventilador/                      # Ventilador Mondial Torre (20 anúncios grátis/mês)
 │   ├── fone/                            # Headset JBL Quantum 400 (20 anúncios grátis/mês)
 │   ├── memoria/                         # Memória RAM Kingston 8GB DDR4 (20 anúncios grátis/mês)
-│   ├── republicar_anuncio.py            # Automação via API direta da OLX + Gestão de Cotas
+│   ├── republicar_anuncio.py            # Automação individual via API direta da OLX + Gestão de Cotas
+│   ├── republicar_tudo.py               # Republicador sequencial em lote (ventilador, fone, memória - sem celular)
+│   ├── republicar_tudo.bat              # Atalho executável para o republicar_tudo.py da OLX
 │   ├── historico_cotas.json             # Histórico e saldo de cotas de anúncios gratuitos
 │   └── ESTRATEGIA_REPUBLICACAO_OUTUBRO_2026.md # Planejamento estratégico de reupagem
 │
@@ -39,20 +41,26 @@ Automação construída com chamadas diretas às APIs internas da OLX (`cloudscr
 ### Recursos:
 - **Extração Segura de Cookies:** Lê os tokens e sessão do perfil ativo do Firefox Nightly sem bloquear ou travar o navegador.
 - **Gerenciador de Cotas Gratuitas:** Controla o limite mensal oficial da OLX por categoria e alerta antes e depois da publicação sobre quantos anúncios gratuitos ainda restam no mês.
+- **Modo em Lote Sequencial (Sem Celular):** Republica Ventilador, Fone e Memória RAM sequencialmente sem confirmações manuais, preservando automaticamente o limite restrito do celular (5/mês).
 - **Modo Verificação de Cotas:** Relatório completo sem alterar nada.
 
 ### Como Executar:
 ```powershell
 cd olx
 
-# Menu interativo (escolha Celular, Ventilador, Fone ou Verificar Cotas)
+# Republicar TODOS os anúncios de cota abundante (Ventilador, Fone e Memória - sem celular)
+python republicar_tudo.py
+# ou:
+.\republicar_tudo.bat
+
+# Simulação segura do lote da OLX
+python republicar_tudo.py --dry-run
+
+# Menu interativo individual (escolha Celular, Ventilador, Fone ou Verificar Cotas)
 python republicar_anuncio.py
 
 # Apenas consultar o saldo de cotas gratuitas
 python republicar_anuncio.py --cotas
-
-# Simulação segura (não exclui nem publica)
-python republicar_anuncio.py 1 --dry-run
 ```
 
 ---
