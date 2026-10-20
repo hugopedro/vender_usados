@@ -12,9 +12,8 @@ vender_usados/
 │   ├── celular/                         # Celular Samsung Galaxy S23 (5 anúncios grátis/mês)
 │   ├── ventilador/                      # Ventilador Mondial Torre (20 anúncios grátis/mês)
 │   ├── fone/                            # Headset JBL Quantum 400 (20 anúncios grátis/mês)
-│   ├── memoria/                         # Memória RAM Kingston 8GB DDR4 (20 anúncios grátis/mês)
 │   ├── republicar_anuncio.py            # Automação individual via API direta da OLX + Gestão de Cotas
-│   ├── republicar_tudo.py               # Republicador sequencial em lote (ventilador, fone, memória - sem celular)
+│   ├── republicar_tudo.py               # Republicador sequencial em lote (ventilador e fone - sem celular)
 │   ├── republicar_tudo.bat              # Atalho executável para o republicar_tudo.py da OLX
 │   ├── historico_cotas.json             # Histórico e saldo de cotas de anúncios gratuitos
 │   └── ESTRATEGIA_REPUBLICACAO_OUTUBRO_2026.md # Planejamento estratégico de reupagem
@@ -23,9 +22,8 @@ vender_usados/
 │   ├── celular/                         # Metadados, fotos e tags do celular
 │   ├── ventilador/                      # Metadados, fotos e tags do ventilador
 │   ├── fone/                            # Metadados, fotos e tags do fone
-│   ├── memoria/                         # Metadados, foto e tags da Memória RAM Kingston 8GB DDR4
 │   ├── republicar_marketplace.py        # Automação individual via Playwright Chromium + Stealth
-│   ├── republicar_tudo.py               # Republicador sequencial em lote dos 4 itens (sem confirmações)
+│   ├── republicar_tudo.py               # Republicador sequencial em lote dos 3 itens (sem confirmações)
 │   └── republicar_tudo.bat              # Atalho executável para o republicar_tudo.py
 │
 ├── .gitignore
@@ -41,14 +39,14 @@ Automação construída com chamadas diretas às APIs internas da OLX (`cloudscr
 ### Recursos:
 - **Extração Segura de Cookies:** Lê os tokens e sessão do perfil ativo do Firefox Nightly sem bloquear ou travar o navegador.
 - **Gerenciador de Cotas Gratuitas:** Controla o limite mensal oficial da OLX por categoria e alerta antes e depois da publicação sobre quantos anúncios gratuitos ainda restam no mês.
-- **Modo em Lote Sequencial (Sem Celular):** Republica Ventilador, Fone e Memória RAM sequencialmente sem confirmações manuais, preservando automaticamente o limite restrito do celular (5/mês).
+- **Modo em Lote Sequencial (Sem Celular):** Republica Ventilador e Fone sequencialmente sem confirmações manuais, preservando automaticamente o limite restrito do celular (5/mês).
 - **Modo Verificação de Cotas:** Relatório completo sem alterar nada.
 
 ### Como Executar:
 ```powershell
 cd olx
 
-# Republicar TODOS os anúncios de cota abundante (Ventilador, Fone e Memória - sem celular)
+# Republicar TODOS os anúncios de cota abundante (Ventilador e Fone - sem celular)
 python republicar_tudo.py
 # ou:
 .\republicar_tudo.bat
@@ -74,26 +72,26 @@ Automação desenvolvida em **Playwright (Chromium)** conectada aos cookies da s
 - **Preenchimento Completo de Atributos:**
   - **Título, Preço e Fotos locais**
   - **Categoria e Condição** (*Usado — em boas condições* ou *Usado — estado de novo*)
-  - **Marca e Seleção de Cor** em dropdown (*Branco* para o celular; *Kingston* para a memória)
+  - **Marca e Seleção de Cor** em dropdown (*Branco* para o celular)
   - **Etiquetas de Produto** (até 20 tags geradas dinamicamente)
-  - **Preferências de Encontro:** *Encontro público* (celular, fone, memória) ou *Retirada* (ventilador)
+  - **Preferências de Encontro:** *Encontro público* (celular e fone) ou *Retirada* (ventilador)
   - **Privacidade:** Ativação automática do switch *Ocultar para os amigos*
 - **Exclusão Limpa:** Localiza o anúncio antigo em 'Seus classificados' e remove antes de republicar o novo.
-- **Modo em Lote Sequencial:** Executa todos os 4 itens em sequência com intervalo de proteção anti-spam, sem solicitar confirmação manual.
+- **Modo em Lote Sequencial:** Executa todos os 3 itens em sequência com intervalo de proteção anti-spam, sem solicitar confirmação manual.
 
 ### Como Executar:
 ```powershell
 cd marketplace
 
-# Republicar TODOS os 4 anúncios em sequência (sem perguntas s/N)
+# Republicar TODOS os 3 anúncios em sequência (sem perguntas s/N)
 python republicar_tudo.py
 # ou:
 .\republicar_tudo.bat
 
-# Simulação segura de todos os 4 itens
+# Simulação segura de todos os 3 itens
 python republicar_tudo.py --dry-run
 
-# Republicar item individual via menu interativo (1 = Celular, 2 = Ventilador, 3 = Fone, 4 = Memória)
+# Republicar item individual via menu interativo (1 = Celular, 2 = Ventilador, 3 = Fone)
 python republicar_marketplace.py
 ```
 

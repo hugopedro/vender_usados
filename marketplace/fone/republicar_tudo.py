@@ -6,7 +6,6 @@ Executa sequencialmente a exclusão e nova publicação de todos os itens cadast
   1) Celular (Samsung Galaxy S23)
   2) Ventilador (Mondial Torre Semi Novo)
   3) Fone (Headset JBL Quantum 400)
-  4) Memória RAM (Kingston 8GB DDR4)
 
 Totalmente autônomo (não solicita confirmações interativas s/N).
 Mantém intervalo de segurança (cooldown anti-spam) entre os anúncios.
@@ -48,7 +47,7 @@ from republicar_marketplace import (
 )
 
 # Ordem padrão de execução em lote
-ITENS_PADRAO = ["celular", "ventilador", "fone", "memoria"]
+ITENS_PADRAO = ["celular", "ventilador", "fone"]
 
 
 def processar_item(page, base_dir, item_key, dry_run=False, fast=False):

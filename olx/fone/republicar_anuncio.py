@@ -96,14 +96,6 @@ ITENS_CONFIG = {
         "keywords": ["jbl", "headset", "fone", "headphone", "quantum"],
         "category_id": 18020,
         "limite_mensal": 20,
-    },
-    "memoria": {
-        "nome": "Memória RAM 8GB DDR4",
-        "categoria_nome": "Informática e peças de PC",
-        "pasta": "memoria",
-        "keywords": ["memória", "memoria", "ram", "ddr4", "kingston", "8gb"],
-        "category_id": 19080,
-        "limite_mensal": 20,
     }
 }
 
@@ -111,15 +103,15 @@ ITENS_CONFIG = {
 def find_olx_base_dir():
     """Identifica o diretório raiz do experimento OLX."""
     curr = os.path.abspath(os.getcwd())
-    # Se está dentro de celular, ventilador, fone ou memoria, o root é o pai
-    if os.path.basename(curr) in ("celular", "ventilador", "fone", "memoria"):
+    # Se está dentro de celular, ventilador ou fone, o root é o pai
+    if os.path.basename(curr) in ("celular", "ventilador", "fone"):
         return os.path.dirname(curr)
     # Se a pasta 'celular' existe aqui, este é o root
     if os.path.isdir(os.path.join(curr, "celular")):
         return curr
     # Fallback pelo caminho absoluto do script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    if os.path.basename(script_dir) in ("celular", "ventilador", "fone", "memoria"):
+    if os.path.basename(script_dir) in ("celular", "ventilador", "fone"):
         return os.path.dirname(script_dir)
     return script_dir
 
@@ -501,9 +493,7 @@ def choose_item(item_arg):
             return "ventilador"
         if key in ("3", "fone", "headset", "headphone", "jbl", "quantum"):
             return "fone"
-        if key in ("4", "mem", "memoria", "memória", "ram", "ddr4", "kingston"):
-            return "memoria"
-        if key in ("5", "cota", "cotas", "verificar", "saldo", "limite", "limites", "info"):
+        if key in ("4", "cota", "cotas", "verificar", "saldo", "limite", "limites", "info"):
             return "cotas"
         print(f"[!] Opção '{item_arg}' não reconhecida. Escolha abaixo:")
 
@@ -516,17 +506,14 @@ def choose_item(item_arg):
         default_choice = "2"
     elif cwd_name == "fone":
         default_choice = "3"
-    elif cwd_name == "memoria":
-        default_choice = "4"
 
     print("\n[?] Qual ação você deseja realizar?")
     print("  1) Republicar Celular (Samsung Galaxy S23)")
     print("  2) Republicar Ventilador (Mondial Torre Semi Novo)")
     print("  3) Republicar Fone (Headset JBL Quantum 400)")
-    print("  4) Republicar Memória RAM (Kingston 8GB DDR4)")
-    print("  5) Verificar cotas de anúncios gratuitos")
+    print("  4) Verificar cotas de anúncios gratuitos")
 
-    choice = input(f"\nEscolha a opção (1, 2, 3, 4 ou 5) [Padrão: {default_choice}]: ").strip()
+    choice = input(f"\nEscolha a opção (1, 2, 3 ou 4) [Padrão: {default_choice}]: ").strip()
     if not choice:
         choice = default_choice
 
@@ -536,9 +523,7 @@ def choose_item(item_arg):
         return "ventilador"
     elif choice in ("3", "fone"):
         return "fone"
-    elif choice in ("4", "memoria", "memória", "ram"):
-        return "memoria"
-    elif choice in ("5", "cotas", "cota", "c"):
+    elif choice in ("4", "cotas", "cota", "c"):
         return "cotas"
     else:
         print("Opção inválida. Selecionando Celular por padrão.")
@@ -547,8 +532,8 @@ def choose_item(item_arg):
 
 def main():
     parser = argparse.ArgumentParser(description="Excluir e republicar anúncio na OLX ou verificar cotas mensais")
-    parser.add_argument("item", nargs="?", default=None, help="Item para republicar ('celular', 'ventilador', 'fone', 'memoria') ou 'cotas'")
-    parser.add_argument("--item", "-i", dest="item_opt", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone', 'memoria'")
+    parser.add_argument("item", nargs="?", default=None, help="Item para republicar ('celular', 'ventilador', 'fone') ou 'cotas'")
+    parser.add_argument("--item", "-i", dest="item_opt", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone'")
     parser.add_argument("--cotas", "-c", action="store_true", help="Exibir saldo de cotas de anúncios gratuitos e sair")
     parser.add_argument("--yes", "-y", action="store_true", help="Executar sem pedir confirmação")
     parser.add_argument("--dry-run", action="store_true", help="Apenas inspecionar sem excluir ou criar nada")

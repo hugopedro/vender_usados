@@ -5,7 +5,6 @@ Script de republicação em lote para a OLX.
 Executa sequencialmente a exclusão e nova publicação de todos os itens com cota abundante:
   1) Ventilador (Mondial Torre Semi Novo)
   2) Fone (Headset JBL Quantum 400)
-  3) Memória RAM (Kingston 8GB DDR4)
 
 Por padrão, NÃO inclui o celular para preservar a cota limitada da categoria (5/mês).
 Totalmente autônomo (não solicita confirmações interativas s/N).
@@ -52,7 +51,7 @@ from republicar_anuncio import (
 )
 
 # Ordem padrão de execução em lote na OLX (exclui celular para proteger cota limitada)
-ITENS_PADRAO = ["ventilador", "fone", "memoria"]
+ITENS_PADRAO = ["ventilador", "fone"]
 
 
 def processar_item_olx(scraper, cookies, base_dir, item_key, dry_run=False, fast=False):
