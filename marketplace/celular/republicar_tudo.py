@@ -6,6 +6,7 @@ Executa sequencialmente a exclusão e nova publicação de todos os itens cadast
   1) Celular (Samsung Galaxy S23)
   2) Ventilador (Mondial Torre Semi Novo)
   3) Fone (Headset JBL Quantum 400)
+  4) Cercadinho (Cercadinho Cercado Galzerano)
 
 Totalmente autônomo (não solicita confirmações interativas s/N).
 Mantém intervalo de segurança (cooldown anti-spam) entre os anúncios.
@@ -47,7 +48,7 @@ from republicar_marketplace import (
 )
 
 # Ordem padrão de execução em lote
-ITENS_PADRAO = ["celular", "ventilador", "fone"]
+ITENS_PADRAO = ["celular", "ventilador", "fone", "cercadinho"]
 
 
 def processar_item(page, base_dir, item_key, dry_run=False, fast=False):
