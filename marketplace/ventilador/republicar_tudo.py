@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 Script de republicação em lote para o Facebook Marketplace.
-Executa sequencialmente a exclusão e nova publicação de todos os itens cadastrados:
+Executa sequencialmente a exclusão e nova publicação dos itens ativos:
   1) Celular (Samsung Galaxy S23)
   2) Ventilador (Mondial Torre Semi Novo)
   3) Fone (Headset JBL Quantum 400)
-  4) Cercadinho (Cercadinho Cercado Galzerano)
+  4) Suporte Lombar McKenzie Original
+  5) Suporte Lombar XT Racer Original Cinza
+(Cercadinho vendido e removido do lote)
 
 Totalmente autônomo (não solicita confirmações interativas s/N).
 Mantém intervalo de segurança (cooldown anti-spam) entre os anúncios.
@@ -48,14 +50,17 @@ from republicar_marketplace import (
 )
 
 # Ordem padrão de execução em lote
-ITENS_PADRAO = ["celular", "ventilador", "fone", "cercadinho"]
+ITENS_PADRAO = ["celular", "ventilador", "fone", "lombar_mckenzie", "lombar_xt_racer"]
 
 
 def processar_item(page, base_dir, item_key, dry_run=False, fast=False):
     """Executa a rotina de exclusão e republicação para um item individual."""
     t_start = time.time()
     cfg = ITENS_CONFIG[item_key]
-    item_data = load_item_data(base_dir, item_key)
+    item_data = load_item_data(base_dir, item_key, advance_state=not dry_run)
+
+    if item_data.get("is_rotativa"):
+        print(f"  🔄 Categoria nesta republicação: '{item_data['category']}' (Ciclo: {' ➔ '.join(item_data['todas_opcoes'])})")
 
     # 1. Localizar anúncio antigo em 'Seus classificados'
     found, more_btn, target_title = find_old_ad(page, item_key, item_data)
@@ -63,11 +68,12 @@ def processar_item(page, base_dir, item_key, dry_run=False, fast=False):
     if dry_run:
         print(f"\n  [DRY-RUN] Verificação concluída para '{item_key}'. Nenhuma alteração feita.")
         elapsed = round(time.time() - t_start, 1)
+        rot_det = f" | Categoria: {item_data['category']}" if item_data.get("is_rotativa") else ""
         return {
             "item": item_key,
             "nome": item_data["title"],
             "status": "DRY-RUN",
-            "detalhes": f"Anúncio anterior: {target_title or 'Nenhum ativo'}",
+            "detalhes": f"Anúncio anterior: {target_title or 'Nenhum ativo'}{rot_det}",
             "elapsed": elapsed,
         }
 
@@ -85,7 +91,7 @@ def processar_item(page, base_dir, item_key, dry_run=False, fast=False):
         "item": item_key,
         "nome": item_data["title"],
         "status": "SUCESSO",
-        "detalhes": "Excluído e republicado com sucesso",
+        "detalhes": f"Excluído e republicado em '{item_data['category']}'",
         "elapsed": elapsed,
     }
 

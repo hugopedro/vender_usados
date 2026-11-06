@@ -98,28 +98,132 @@ ITENS_CONFIG = {
         "limite_mensal": 20,
     },
     "cercadinho": {
-        "nome": "Cercadinho Cercado Galzerano",
+        "nome": "Cercadinho Cercado Galzerano [VENDIDO]",
         "categoria_nome": "Artigos infantis",
         "pasta": "cercadinho",
         "keywords": ["cercadinho", "cercado", "galzerano"],
         "category_id": 9080,
         "limite_mensal": 20,
+    },
+    "lombar_mckenzie": {
+        "nome": "Suporte Lombar McKenzie Original SlimLine Roll",
+        "categoria_nome": "Saúde e beleza",
+        "pasta": "lombar_mckenzie",
+        "keywords": ["mckenzie", "slimline"],
+        "category_id": 8020,
+        "limite_mensal": 20,
+        "categorias_rotativas": [
+            {
+                "category_id": 8020,
+                "categoria_nome": "Saúde e beleza",
+                "extra_attrs": {"condition": "2", "cosmetic_type": "6"}
+            },
+            {
+                "category_id": 23020,
+                "categoria_nome": "Comércio e escritório",
+                "extra_attrs": {"condition_full": "2", "office_items_type": "11"}
+            }
+        ]
+    },
+    "lombar_xt_racer": {
+        "nome": "Suporte Lombar XT Racer Original Cinza",
+        "categoria_nome": "Comércio e escritório",
+        "pasta": "lombar_xt_racer",
+        "keywords": ["xt racer", "racer"],
+        "category_id": 23020,
+        "limite_mensal": 20,
+        "categorias_rotativas": [
+            {
+                "category_id": 23020,
+                "categoria_nome": "Comércio e escritório",
+                "extra_attrs": {"condition_full": "2", "office_items_type": "11"}
+            },
+            {
+                "category_id": 8020,
+                "categoria_nome": "Saúde e beleza",
+                "extra_attrs": {"condition": "2", "cosmetic_type": "6"}
+            }
+        ]
     }
 }
+
+
+def resolve_olx_category(base_dir, item_key, current_category_id=None, advance_state=True):
+    """
+    Resolve a categoria para o item na OLX.
+    Se o item possuir 'categorias_rotativas', alterna ciclicamente a cada republicação.
+    Salva o estado em 'categoria_rotativa.json' na pasta do item.
+    """
+    cfg = ITENS_CONFIG[item_key]
+    rotativas = cfg.get("categorias_rotativas")
+    item_dir = os.path.join(base_dir, cfg["pasta"])
+
+    if not rotativas:
+        return {
+            "category_id": cfg.get("category_id"),
+            "categoria_nome": cfg.get("categoria_nome", ""),
+            "extra_attrs": {},
+            "rotativa": False,
+            "todas_opcoes": [cfg.get("categoria_nome", "")]
+        }
+
+    state_file = os.path.join(item_dir, "categoria_rotativa.json")
+    last_cat_id = None
+
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r", encoding="utf-8") as f:
+                s_data = json.load(f)
+                last_cat_id = s_data.get("ultimo_category_id")
+        except Exception:
+            pass
+
+    if last_cat_id is None and current_category_id:
+        last_cat_id = current_category_id
+
+    # Encontra o índice da próxima categoria da lista rotativa
+    idx = 0
+    if last_cat_id is not None:
+        for i, opt in enumerate(rotativas):
+            if opt["category_id"] == last_cat_id:
+                idx = (i + 1) % len(rotativas)
+                break
+
+    chosen = rotativas[idx]
+
+    if advance_state:
+        try:
+            with open(state_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "ultimo_category_id": chosen["category_id"],
+                    "categoria_nome": chosen["categoria_nome"],
+                    "atualizado_em": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                }, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"  [!] Aviso: Não foi possível salvar estado de rotação da OLX: {e}")
+
+    return {
+        "category_id": chosen["category_id"],
+        "categoria_nome": chosen["categoria_nome"],
+        "extra_attrs": chosen.get("extra_attrs", {}),
+        "rotativa": True,
+        "todas_opcoes": [o["categoria_nome"] for o in rotativas]
+    }
 
 
 def find_olx_base_dir():
     """Identifica o diretório raiz do experimento OLX."""
     curr = os.path.abspath(os.getcwd())
-    # Se está dentro de celular, ventilador, fone ou cercadinho, o root é o pai
-    if os.path.basename(curr) in ("celular", "ventilador", "fone", "cercadinho"):
+    pastas_itens = ("celular", "ventilador", "fone", "cercadinho", "lombar_mckenzie", "lombar_xt_racer")
+    # Se está dentro de uma subpasta de item, o root é o pai
+    if os.path.basename(curr) in pastas_itens:
         return os.path.dirname(curr)
     # Se a pasta 'celular' existe aqui, este é o root
     if os.path.isdir(os.path.join(curr, "celular")):
         return curr
     # Fallback pelo caminho absoluto do script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    if os.path.basename(script_dir) in ("celular", "ventilador", "fone", "cercadinho"):
+    if os.path.basename(script_dir) in pastas_itens:
         return os.path.dirname(script_dir)
     return script_dir
 
@@ -418,8 +522,8 @@ def upload_images(scraper, cookies, item_dir, fast=False):
     return uploaded_names
 
 
-def create_ad(scraper, cookies, base_ad, item_dir, uploaded_images, fast=False):
-    """Publica o novo anúncio com os mesmos atributos técnicos e as novas fotos."""
+def create_ad(scraper, cookies, base_ad, item_dir, uploaded_images, fast=False, item_key=None, advance_rotation=True):
+    """Publica o novo anúncio com os mesmos atributos técnicos, novas fotos e rotação inteligente de categoria."""
     # Pausa humanizada simulando conferência do formulário
     human_delay(3.5, 6.5, "Simulando revisão dos dados antes de submeter", fast=fast)
 
@@ -461,10 +565,21 @@ def create_ad(scraper, cookies, base_ad, item_dir, uploaded_images, fast=False):
             if p_str.isdigit():
                 price = int(p_str)
 
-    # Base payload
+    # Determina categoria (com rotação automática se configurada para o item)
+    target_cat_id = base_ad.get("category")
+    extra_cat_attrs = {}
+    if item_key and item_key in ITENS_CONFIG:
+        base_dir = find_olx_base_dir()
+        cat_info = resolve_olx_category(base_dir, item_key, current_category_id=target_cat_id, advance_state=advance_rotation)
+        target_cat_id = cat_info["category_id"]
+        extra_cat_attrs = cat_info["extra_attrs"]
+        if cat_info["rotativa"]:
+            print(f"  🔄 Categoria Alternada: '{cat_info['categoria_nome']}' (ID: {target_cat_id})")
+
+    # Base payload (Garantia da OLX e Entrega Fácil sempre desativadas por padrão)
     payload = {
         "body": body,
-        "category": base_ad.get("category"),
+        "category": target_cat_id,
         "image": uploaded_images,
         "olx_pay": "1" if ENABLE_OLX_PAY else "0",
         "olx_ship": "1" if ENABLE_OLX_SHIP else "0",
@@ -478,12 +593,25 @@ def create_ad(scraper, cookies, base_ad, item_dir, uploaded_images, fast=False):
         "tokenAllowme": None
     }
 
-    # Preserva automaticamente atributos específicos de categoria (celular, eletro, áudio, memória/info, infantil/bebê)
+    print(f"  ✓ Garantia da OLX (OLX Pay): {'Ativada' if ENABLE_OLX_PAY else 'Desativada (sem taxas)'}")
+    print(f"  ✓ Entrega Fácil (OLX Ship): {'Ativada' if ENABLE_OLX_SHIP else 'Desativada (apenas entrega em mãos)'}")
+
+    # Preserva automaticamente atributos específicos de categoria
     for k, v in base_ad.items():
         if any(k.startswith(prefix) for prefix in ["eletro_", "cellphone_", "electronics_", "audio_", "info_", "children_"]):
             payload[k] = str(v)
-        elif k in ("condition_full", "customizable"):
+        elif k in ("condition", "condition_full", "customizable", "cosmetic_type", "office_items_type"):
             payload[k] = str(v)
+
+    # Se houve troca de categoria rotativa, limpa atributos antigos conflitantes e aplica os novos
+    if extra_cat_attrs:
+        if target_cat_id == 23020:
+            payload.pop("cosmetic_type", None)
+            payload.pop("condition", None)
+        elif target_cat_id == 8020:
+            payload.pop("office_items_type", None)
+            payload.pop("condition_full", None)
+        payload.update(extra_cat_attrs)
 
     resp = scraper.post(URL_CREATE_AD, headers=headers, cookies=cookies, json=payload, timeout=20)
     if resp.status_code in (200, 201):
@@ -503,9 +631,13 @@ def choose_item(item_arg):
             return "ventilador"
         if key in ("3", "fone", "headset", "headphone", "jbl", "quantum"):
             return "fone"
-        if key in ("4", "cercadinho", "cercado", "galzerano"):
+        if key in ("4", "mckenzie", "lombar_mckenzie", "slimline", "suporte_mckenzie"):
+            return "lombar_mckenzie"
+        if key in ("5", "xt", "xt_racer", "lombar_xt_racer", "suporte_xt", "suporte_xt_racer"):
+            return "lombar_xt_racer"
+        if key in ("6", "cercadinho", "cercado", "galzerano"):
             return "cercadinho"
-        if key in ("5", "cota", "cotas", "verificar", "saldo", "limite", "limites", "info"):
+        if key in ("7", "cota", "cotas", "verificar", "saldo", "limite", "limites", "info"):
             return "cotas"
         print(f"[!] Opção '{item_arg}' não reconhecida. Escolha abaixo:")
 
@@ -518,17 +650,23 @@ def choose_item(item_arg):
         default_choice = "2"
     elif cwd_name == "fone":
         default_choice = "3"
-    elif cwd_name == "cercadinho":
+    elif cwd_name in ("lombar_mckenzie", "mckenzie"):
         default_choice = "4"
+    elif cwd_name in ("lombar_xt_racer", "xt_racer"):
+        default_choice = "5"
+    elif cwd_name == "cercadinho":
+        default_choice = "6"
 
     print("\n[?] Qual ação você deseja realizar?")
     print("  1) Republicar Celular (Samsung Galaxy S23)")
     print("  2) Republicar Ventilador (Mondial Torre Semi Novo)")
     print("  3) Republicar Fone (Headset JBL Quantum 400)")
-    print("  4) Republicar Cercadinho (Cercadinho Cercado Galzerano)")
-    print("  5) Verificar cotas de anúncios gratuitos")
+    print("  4) Republicar Suporte Lombar McKenzie Original SlimLine Roll")
+    print("  5) Republicar Suporte Lombar XT Racer Original Cinza")
+    print("  6) Republicar Cercadinho (Cercadinho Galzerano - Vendido)")
+    print("  7) Verificar cotas de anúncios gratuitos")
 
-    choice = input(f"\nEscolha a opção (1, 2, 3, 4 ou 5) [Padrão: {default_choice}]: ").strip()
+    choice = input(f"\nEscolha a opção (1 a 7) [Padrão: {default_choice}]: ").strip()
     if not choice:
         choice = default_choice
 
@@ -538,9 +676,13 @@ def choose_item(item_arg):
         return "ventilador"
     elif choice in ("3", "fone"):
         return "fone"
-    elif choice in ("4", "cercadinho", "cercado", "galzerano"):
+    elif choice in ("4", "mckenzie", "lombar_mckenzie"):
+        return "lombar_mckenzie"
+    elif choice in ("5", "xt_racer", "lombar_xt_racer", "xt"):
+        return "lombar_xt_racer"
+    elif choice in ("6", "cercadinho", "cercado", "galzerano"):
         return "cercadinho"
-    elif choice in ("5", "cotas", "cota", "c"):
+    elif choice in ("7", "cotas", "cota", "c"):
         return "cotas"
     else:
         print("Opção inválida. Selecionando Celular por padrão.")
@@ -637,6 +779,13 @@ def main():
     else:
         print(f"     • Saldo disponível: ⚠️ Limite gratuito mensal esgotado (0 restantes)!")
 
+    # Informação sobre alternância de categoria se configurada
+    cat_rot = resolve_olx_category(base_olx_dir, selected_item, current_category_id=target_ad.get("category"), advance_state=False)
+    if cat_rot["rotativa"]:
+        print(f"\n  🔄 ESTRATÉGIA DE CATEGORIA ROTATIVA:")
+        print(f"     • Próxima categoria na fila: {cat_rot['categoria_nome']} (ID: {cat_rot['category_id']})")
+        print(f"     • Ciclo de alternância: {' ➔ '.join(cat_rot['todas_opcoes'])}")
+
     if args.dry_run:
         print("\n[!] Modo DRY-RUN ativado. Nenhuma alteração foi realizada.")
         return
@@ -662,9 +811,9 @@ def main():
     print(f"\n[4/5] Realizando upload das imagens ({selected_item})...")
     uploaded_images = upload_images(scraper, cookies, item_dir, fast=args.fast)
 
-    # 5. Publicar novo anúncio
-    print(f"\n[5/5] Publicando novo anúncio de {selected_item} exatamente igual...")
-    new_ad_id, res_data = create_ad(scraper, cookies, target_ad, item_dir, uploaded_images, fast=args.fast)
+    # 5. Publicar novo anúncio com categoria rotativa
+    print(f"\n[5/5] Publicando novo anúncio de {selected_item}...")
+    new_ad_id, res_data = create_ad(scraper, cookies, target_ad, item_dir, uploaded_images, fast=args.fast, item_key=selected_item, advance_rotation=True)
     print(f"  ✓ Anúncio criado com sucesso!")
     print(f"  Novo Ad ID: {new_ad_id}")
 

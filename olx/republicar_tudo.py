@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 Script de republicação em lote para a OLX.
-Executa sequencialmente a exclusão e nova publicação de todos os itens com cota abundante:
+Executa sequencialmente a exclusão e nova publicação de todos os itens ativos de cota abundante:
   1) Ventilador (Mondial Torre Semi Novo)
   2) Fone (Headset JBL Quantum 400)
-  3) Cercadinho (Cercadinho Cercado Galzerano)
+  3) Suporte Lombar McKenzie Original SlimLine Roll
+  4) Suporte Lombar XT Racer Original Cinza
+(Cercadinho vendido e removido do lote)
 
 Por padrão, NÃO inclui o celular para preservar a cota limitada da categoria (5/mês).
 Totalmente autônomo (não solicita confirmações interativas s/N).
@@ -49,10 +51,11 @@ from republicar_anuncio import (
     get_item_quota_status,
     display_quota_report,
     human_delay,
+    resolve_olx_category,
 )
 
 # Ordem padrão de execução em lote na OLX (exclui celular para proteger cota limitada)
-ITENS_PADRAO = ["ventilador", "fone", "cercadinho"]
+ITENS_PADRAO = ["ventilador", "fone", "lombar_mckenzie", "lombar_xt_racer"]
 
 
 def processar_item_olx(scraper, cookies, base_dir, item_key, dry_run=False, fast=False):
@@ -113,13 +116,19 @@ def processar_item_olx(scraper, cookies, base_dir, item_key, dry_run=False, fast
         except Exception:
             pass
 
+    # Verifica se o item possui rotação de categorias
+    cat_info = resolve_olx_category(base_dir, item_key, current_category_id=target_ad.get("category"), advance_state=not dry_run)
+    if cat_info["rotativa"]:
+        print(f"  🔄 Categoria nesta republicação: '{cat_info['categoria_nome']}' (ID: {cat_info['category_id']})")
+
     if dry_run:
+        detalhe_cat = f" | Categoria: {cat_info['categoria_nome']}" if cat_info["rotativa"] else ""
         print(f"  [DRY-RUN] Verificação concluída para '{item_key}'. Nenhuma alteração feita.")
         return {
             "item": item_key,
             "nome": subject or cfg["nome"],
             "status": "DRY-RUN",
-            "detalhes": f"List ID: {list_id} | Cota rest.: {quota['restantes']}",
+            "detalhes": f"List ID: {list_id} | Cota: {quota['restantes']} rest.{detalhe_cat}",
             "ad_id": ad_id,
             "elapsed": round(time.time() - t_start, 1),
         }
@@ -137,9 +146,9 @@ def processar_item_olx(scraper, cookies, base_dir, item_key, dry_run=False, fast
     print(f"  [3/4] Fazendo upload das fotos locais ({item_key})...")
     uploaded_images = upload_images(scraper, cookies, item_dir, fast=fast)
 
-    # 5. Publicar novo anúncio
-    print(f"  [4/4] Publicando novo anúncio na OLX...")
-    new_ad_id, res_data = create_ad(scraper, cookies, target_ad, item_dir, uploaded_images, fast=fast)
+    # 5. Publicar novo anúncio com categoria rotativa
+    print(f"  [4/4] Publicando novo anúncio na OLX (Categoria: '{cat_info['categoria_nome']}')...")
+    new_ad_id, res_data = create_ad(scraper, cookies, target_ad, item_dir, uploaded_images, fast=fast, item_key=item_key, advance_rotation=not dry_run)
     print(f"  ✓ Anúncio criado com sucesso! Novo Ad ID: {new_ad_id}")
 
     # Registra no histórico de cotas

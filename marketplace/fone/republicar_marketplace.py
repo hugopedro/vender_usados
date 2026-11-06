@@ -69,7 +69,7 @@ ITENS_CONFIG = {
         "ocultar_amigos": True,
     },
     "cercadinho": {
-        "nome": "Cercadinho Cercado Galzerano",
+        "nome": "Cercadinho Cercado Galzerano [VENDIDO]",
         "pasta": "cercadinho",
         "keywords": ["cercadinho", "cercado", "galzerano"],
         "categoria": "Utilidades domésticas",
@@ -77,6 +77,32 @@ ITENS_CONFIG = {
         "marca": "Galzerano",
         "compativel": None,
         "cor": None,
+        "encontro": "Retirada",
+        "ocultar_amigos": True,
+    },
+    "lombar_mckenzie": {
+        "nome": "Suporte Lombar McKenzie Original",
+        "pasta": "lombar_mckenzie",
+        "keywords": ["mckenzie", "slimline"],
+        "categoria": "Saúde e beleza",
+        "categorias_rotativas": ["Saúde e beleza", "Utilidades domésticas"],
+        "condicao": "Usado — estado de novo",
+        "marca": None,
+        "compativel": None,
+        "cor": "Preto",
+        "encontro": "Retirada",
+        "ocultar_amigos": True,
+    },
+    "lombar_xt_racer": {
+        "nome": "Suporte Lombar XT Racer Original Cinza – Pouco Uso",
+        "pasta": "lombar_xt_racer",
+        "keywords": ["xt racer", "racer"],
+        "categoria": "Utilidades domésticas",
+        "categorias_rotativas": ["Utilidades domésticas", "Móveis"],
+        "condicao": "Usado — estado de novo",
+        "marca": "XT Racer",
+        "compativel": None,
+        "cor": "Cinza",
         "encontro": "Retirada",
         "ocultar_amigos": True,
     },
@@ -123,11 +149,15 @@ def human_click(locator, page, fast=False):
 def find_marketplace_base_dir():
     """Identifica o diretório raiz do experimento Marketplace."""
     curr = os.path.abspath(os.getcwd())
-    if os.path.basename(curr) in ("celular", "ventilador", "fone", "cercadinho"):
+    pastas_itens = ("celular", "ventilador", "fone", "cercadinho", "lombar_mckenzie", "lombar_xt_racer")
+    if os.path.basename(curr) in pastas_itens:
         return os.path.dirname(curr)
     if os.path.isdir(os.path.join(curr, "celular")):
         return curr
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    if os.path.basename(script_dir) in pastas_itens:
+        return os.path.dirname(script_dir)
+    return script_dir
     if os.path.basename(script_dir) in ("celular", "ventilador", "fone", "cercadinho"):
         return os.path.dirname(script_dir)
     return script_dir
@@ -210,7 +240,11 @@ def choose_item(item_arg):
             return "ventilador"
         if key in ("3", "fone", "headset", "headphone", "jbl", "quantum"):
             return "fone"
-        if key in ("4", "cercadinho", "cercado", "galzerano"):
+        if key in ("4", "mckenzie", "lombar_mckenzie", "slimline", "suporte_mckenzie"):
+            return "lombar_mckenzie"
+        if key in ("5", "xt", "xt_racer", "lombar_xt_racer", "suporte_xt", "suporte_xt_racer"):
+            return "lombar_xt_racer"
+        if key in ("6", "cercadinho", "cercado", "galzerano"):
             return "cercadinho"
         print(f"[!] Opção '{item_arg}' não reconhecida. Escolha abaixo:")
 
@@ -222,16 +256,22 @@ def choose_item(item_arg):
         default_choice = "2"
     elif cwd_name == "fone":
         default_choice = "3"
-    elif cwd_name == "cercadinho":
+    elif cwd_name in ("lombar_mckenzie", "mckenzie"):
         default_choice = "4"
+    elif cwd_name in ("lombar_xt_racer", "xt_racer"):
+        default_choice = "5"
+    elif cwd_name == "cercadinho":
+        default_choice = "6"
 
     print("\n[?] Qual item você deseja republicar no Facebook Marketplace?")
     print("  1) Celular (Samsung Galaxy S23)")
     print("  2) Ventilador (Mondial Torre Semi Novo)")
     print("  3) Fone (Headset JBL Quantum 400)")
-    print("  4) Cercadinho (Cercadinho Cercado Galzerano)")
+    print("  4) Suporte Lombar McKenzie Original")
+    print("  5) Suporte Lombar XT Racer Original Cinza")
+    print("  6) Cercadinho (Cercadinho Galzerano - Vendido)")
 
-    choice = input(f"\nEscolha a opção (1, 2, 3 ou 4) [Padrão: {default_choice}]: ").strip()
+    choice = input(f"\nEscolha a opção (1 a 6) [Padrão: {default_choice}]: ").strip()
     if not choice:
         choice = default_choice
 
@@ -241,19 +281,69 @@ def choose_item(item_arg):
         return "ventilador"
     elif choice in ("3", "fone"):
         return "fone"
-    elif choice in ("4", "cercadinho", "cercado", "galzerano"):
+    elif choice in ("4", "mckenzie", "lombar_mckenzie"):
+        return "lombar_mckenzie"
+    elif choice in ("5", "xt_racer", "lombar_xt_racer", "xt"):
+        return "lombar_xt_racer"
+    elif choice in ("6", "cercadinho", "cercado", "galzerano"):
         return "cercadinho"
     else:
         print("Opção inválida. Selecionando Celular por padrão.")
         return "celular"
 
 
-def load_item_data(base_dir, item_key):
+def resolve_marketplace_category(base_dir, item_key, advance_state=True):
+    """
+    Resolve a categoria para o item no Facebook Marketplace.
+    Se o item possuir 'categorias_rotativas', alterna ciclicamente a cada republicação.
+    Salva o estado em 'categoria_rotativa.json' na pasta do item.
+    """
+    cfg = ITENS_CONFIG[item_key]
+    rotativas = cfg.get("categorias_rotativas")
+    item_dir = os.path.join(base_dir, cfg["pasta"])
+
+    if not rotativas:
+        return cfg.get("categoria", "Utilidades domésticas"), False, [cfg.get("categoria", "")]
+
+    state_file = os.path.join(item_dir, "categoria_rotativa.json")
+    last_cat = None
+
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r", encoding="utf-8") as f:
+                s_data = json.load(f)
+                last_cat = s_data.get("ultima_categoria")
+        except Exception:
+            pass
+
+    idx = 0
+    if last_cat and last_cat in rotativas:
+        idx = (rotativas.index(last_cat) + 1) % len(rotativas)
+
+    chosen = rotativas[idx]
+
+    if advance_state:
+        try:
+            with open(state_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "ultima_categoria": chosen,
+                    "atualizado_em": time.strftime("%Y-%m-%d %H:%M:%S")
+                }, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"  [!] Aviso: Não foi possível salvar estado de rotação do Marketplace: {e}")
+
+    return chosen, True, rotativas
+
+
+def load_item_data(base_dir, item_key, advance_state=True):
     """Carrega título, preço, corpo, tags e imagens da pasta local do item."""
     cfg = ITENS_CONFIG[item_key]
     item_dir = os.path.join(base_dir, cfg["pasta"])
     if not os.path.isdir(item_dir):
         raise RuntimeError(f"Pasta do item não encontrada em: {item_dir}")
+
+    # Determina categoria (com rotação automática se configurada)
+    chosen_cat, is_rotativa, todas_opcoes = resolve_marketplace_category(base_dir, item_key, advance_state=advance_state)
 
     title_file = os.path.join(item_dir, "descricao_titulo.txt")
     body_file = os.path.join(item_dir, "descricao_corpo.txt")
@@ -304,7 +394,10 @@ def load_item_data(base_dir, item_key):
         "tags": tags,
         "images": images,
         "item_dir": item_dir,
-        "cfg": cfg
+        "cfg": cfg,
+        "category": chosen_cat,
+        "is_rotativa": is_rotativa,
+        "todas_opcoes": todas_opcoes
     }
 
 
@@ -451,8 +544,9 @@ def publish_new_ad(page, item_data, fast=False):
     human_delay(0.8, 1.5, fast=fast)
 
     # 3. Seleção de Categoria
-    target_category = cfg["categoria"]
-    print(f"  ✓ Selecionando Categoria: '{target_category}'")
+    target_category = item_data.get("category") or cfg["categoria"]
+    rot_flag = " (Alternância Automática 🔄)" if item_data.get("is_rotativa") else ""
+    print(f"  ✓ Selecionando Categoria: '{target_category}'{rot_flag}")
     cat_dropdown = page.locator('label:has-text("Categoria")').first
     human_click(cat_dropdown, page, fast=fast)
     page.wait_for_timeout(1000)
@@ -621,17 +715,27 @@ def publish_new_ad(page, item_data, fast=False):
 
     # 12. Avançar para a tela de confirmação/grupos
     print("\n[5/5] Finalizando e publicando anúncio no Marketplace...")
-    avancar_btn = page.locator('div[aria-label="Avançar"], div[role="button"]:has-text("Avançar")').first
+    avancar_btn = page.locator('div[aria-label="Avançar"], div[role="button"]:has-text("Avançar"), button:has-text("Avançar")').first
     if not avancar_btn.is_enabled():
         raise RuntimeError("Botão 'Avançar' não está habilitado. Verifique os campos obrigatórios.")
 
     human_click(avancar_btn, page, fast=fast)
     page.wait_for_timeout(3500)
 
-    # 11. Botão 'Publicar'
-    pub_btn = page.locator('div[aria-label="Publicar"], div[role="button"]:has-text("Publicar")').first
+    # 13. Botão 'Publicar' / 'Postar' (Facebook alterna a interface entre 'Publicar' e 'Postar')
+    selector_pub = 'div[aria-label="Postar"], div[aria-label="Publicar"], div[role="button"]:has-text("Postar"), div[role="button"]:has-text("Publicar"), button:has-text("Postar"), button:has-text("Publicar")'
+    try:
+        page.wait_for_selector(selector_pub, timeout=8000)
+    except Exception:
+        pass
+
+    pub_btn = page.locator(selector_pub).first
     if pub_btn.count() == 0 or not pub_btn.is_enabled():
-        raise RuntimeError("Botão 'Publicar' não encontrado ou desabilitado na etapa final.")
+        page.wait_for_timeout(3000)
+        pub_btn = page.locator(selector_pub).first
+
+    if pub_btn.count() == 0 or not pub_btn.is_enabled():
+        raise RuntimeError("Botão 'Publicar/Postar' não encontrado ou desabilitado na etapa final.")
 
     human_click(pub_btn, page, fast=fast)
     print("  ⏳ Submetendo anúncio (aguardando confirmação do Facebook)...")
@@ -654,10 +758,12 @@ def main():
     selected_item = choose_item(item_arg)
 
     base_dir = find_marketplace_base_dir()
-    item_data = load_item_data(base_dir, selected_item)
+    item_data = load_item_data(base_dir, selected_item, advance_state=not args.dry_run)
 
     print("=" * 68)
     print(f"   REPUBLICADOR AUTOMÁTICO FACEBOOK MARKETPLACE: {selected_item.upper()}")
+    if item_data.get("is_rotativa"):
+        print(f"   🔄 Categoria desta vez: '{item_data['category']}' ({' ➔ '.join(item_data['todas_opcoes'])})")
     print("=" * 68)
 
     # 1. Localizar sessão do Firefox e cookies
