@@ -47,6 +47,8 @@ from republicar_marketplace import (
     delete_old_ad,
     publish_new_ad,
     human_delay,
+    check_facebook_session,
+    abrir_firefox_login,
 )
 
 # Ordem padrão de execução em lote
@@ -101,6 +103,11 @@ def main():
         description="Republicar automaticamente TODOS os itens no Facebook Marketplace em sequência (sem confirmação s/N)."
     )
     parser.add_argument(
+        "--login",
+        action="store_true",
+        help="Abrir o Firefox Nightly na página de login do Facebook para autenticação.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Apenas verifica a identificação dos anúncios sem excluir ou publicar nada.",
@@ -134,6 +141,10 @@ def main():
         help=f"Lista de itens a processar (padrão: {' '.join(ITENS_PADRAO)}).",
     )
     args = parser.parse_args()
+
+    if args.login:
+        abrir_firefox_login()
+        return
 
     # Validação dos itens informados
     itens_validos = []
@@ -212,6 +223,23 @@ def main():
 
         # Aceita eventuais caixas de diálogo inesperadas para não travar o fluxo
         page.on("dialog", lambda dialog: dialog.accept())
+
+        # Validação antecipada da sessão no Facebook
+        print("\n[Verificação] Checando status da sessão no Facebook...")
+        page.goto("https://www.facebook.com/marketplace/you/selling", wait_until="domcontentloaded", timeout=45000)
+        page.wait_for_timeout(3500)
+        if not check_facebook_session(page):
+            print("\n" + "!" * 72, file=sys.stderr)
+            print("  ❌ [ERRO CRÍTICO]: Sessão do Facebook no Firefox Nightly DESCONECTADA!", file=sys.stderr)
+            print("  A Meta solicitou confirmação de senha ou encerrou a sessão ativa.", file=sys.stderr)
+            print("\n  👉 Como resolver:", file=sys.stderr)
+            print("     1. Abra o Firefox Nightly (ou rode: python republicar_tudo.py --login)", file=sys.stderr)
+            print("     2. Acesse https://www.facebook.com/ e digite sua senha.", file=sys.stderr)
+            print("     3. Execute o script novamente.", file=sys.stderr)
+            print("!" * 72 + "\n", file=sys.stderr)
+            browser.close()
+            sys.exit(1)
+        print("  ✓ Sessão ativa e autenticada com sucesso no Facebook!")
 
         total = len(itens_validos)
         for idx, item_key in enumerate(itens_validos, start=1):

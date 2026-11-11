@@ -158,9 +158,6 @@ def find_marketplace_base_dir():
     if os.path.basename(script_dir) in pastas_itens:
         return os.path.dirname(script_dir)
     return script_dir
-    if os.path.basename(script_dir) in ("celular", "ventilador", "fone", "cercadinho"):
-        return os.path.dirname(script_dir)
-    return script_dir
 
 
 def find_firefox_profile():
@@ -401,11 +398,45 @@ def load_item_data(base_dir, item_key, advance_state=True):
     }
 
 
+def check_facebook_session(page):
+    """Verifica se a sessão do Facebook está autenticada e ativa."""
+    url_lower = page.url.lower()
+    login_inputs = page.locator('input[name="pass"], input[type="password"], input[name="email"]')
+    if login_inputs.count() > 0 or "login" in url_lower or "checkpoint" in url_lower or "recover" in url_lower:
+        return False
+    return True
+
+
+def abrir_firefox_login():
+    """Abre o Firefox Nightly diretamente na página do Facebook para login manual."""
+    candidates = [
+        r"C:\Program Files\Firefox Nightly\firefox.exe",
+        r"C:\Program Files\Mozilla Firefox\firefox.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Mozilla Firefox\firefox.exe"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Firefox Nightly\firefox.exe")
+    ]
+    ff_exe = next((p for p in candidates if os.path.exists(p)), None)
+    if ff_exe:
+        import subprocess
+        print(f"\n[+] Abrindo Firefox Nightly em https://www.facebook.com/ ...")
+        subprocess.Popen([ff_exe, "https://www.facebook.com/"])
+        print("    Por favor, conclua o login no navegador e execute o script novamente.\n")
+    else:
+        print("\n[!] Firefox não encontrado automaticamente. Abra o navegador manualmente e faça login em https://www.facebook.com/\n")
+
+
 def find_old_ad(page, item_key, item_data):
     """Localiza o anúncio antigo na página de vendas e retorna suas informações."""
     print("\n[2/5] Verificando anúncios ativos em 'Seus classificados'...")
     page.goto("https://www.facebook.com/marketplace/you/selling", wait_until="domcontentloaded", timeout=45000)
     page.wait_for_timeout(4000)
+
+    if not check_facebook_session(page):
+        raise RuntimeError(
+            "Sua sessão do Facebook no Firefox Nightly está desconectada ou expirou.\n"
+            "    A Meta solicitou confirmação de senha ou login na conta.\n"
+            "    👉 Como resolver: Abra o Firefox Nightly (ou use --login), faça login em https://www.facebook.com/ e execute o script novamente."
+        )
 
     keywords = item_data["cfg"]["keywords"]
     more_btn = None
@@ -525,6 +556,13 @@ def publish_new_ad(page, item_data, fast=False):
     print("\n[4/5] Acessando formulário de criação de classificado...")
     page.goto("https://www.facebook.com/marketplace/create/item", wait_until="domcontentloaded", timeout=45000)
     page.wait_for_timeout(4000)
+
+    if not check_facebook_session(page):
+        raise RuntimeError(
+            "Sua sessão do Facebook no Firefox Nightly está desconectada ou expirou.\n"
+            "    A Meta solicitou confirmação de senha ou login na conta.\n"
+            "    👉 Como resolver: Abra o Firefox Nightly (ou use --login), faça login em https://www.facebook.com/ e execute o script novamente."
+        )
 
     # 1. Upload de Imagens
     print(f"\n[+] Fazendo upload de {len(images)} imagens...")
@@ -745,14 +783,19 @@ def publish_new_ad(page, item_data, fast=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Excluir e republicar anúncio no Facebook Marketplace (Celular, Ventilador, Fone ou Cercadinho)")
-    parser.add_argument("item", nargs="?", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone' ou 'cercadinho'")
-    parser.add_argument("--item", "-i", dest="item_opt", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone' ou 'cercadinho'")
+    parser = argparse.ArgumentParser(description="Excluir e republicar anúncio no Facebook Marketplace (Celular, Ventilador, Fone ou Suporte Lombar)")
+    parser.add_argument("item", nargs="?", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone', 'lombar_mckenzie', 'lombar_xt_racer' ou 'cercadinho'")
+    parser.add_argument("--item", "-i", dest="item_opt", default=None, help="Item para republicar: 'celular', 'ventilador', 'fone', 'lombar_mckenzie', 'lombar_xt_racer' ou 'cercadinho'")
+    parser.add_argument("--login", action="store_true", help="Abrir o Firefox Nightly na página de login do Facebook para autenticação")
     parser.add_argument("--yes", "-y", action="store_true", help="Executar sem pedir confirmação interativa")
     parser.add_argument("--dry-run", action="store_true", help="Apenas preencher o formulário sem excluir ou publicar")
     parser.add_argument("--headed", action="store_true", help="Executar com janela do navegador visível")
     parser.add_argument("--fast", action="store_true", help="Desativar pausas humanizadas (modo rápido)")
     args = parser.parse_args()
+
+    if args.login:
+        abrir_firefox_login()
+        return
 
     item_arg = args.item_opt or args.item
     selected_item = choose_item(item_arg)
