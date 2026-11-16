@@ -49,6 +49,7 @@ from republicar_marketplace import (
     human_delay,
     check_facebook_session,
     abrir_firefox_login,
+    create_stealth_browser_context,
 )
 
 # Ordem padrão de execução em lote
@@ -125,14 +126,20 @@ def main():
     parser.add_argument(
         "--delay-min",
         type=float,
-        default=8.0,
-        help="Tempo mínimo de espera (segundos) entre anúncios (padrão: 8.0s).",
+        default=25.0,
+        help="Tempo mínimo de espera (segundos) entre anúncios (padrão: 25.0s para evitar rate-limit e checkpoints da Meta).",
     )
     parser.add_argument(
         "--delay-max",
         type=float,
-        default=15.0,
-        help="Tempo máximo de espera (segundos) entre anúncios (padrão: 15.0s).",
+        default=45.0,
+        help="Tempo máximo de espera (segundos) entre anúncios (padrão: 45.0s).",
+    )
+    parser.add_argument(
+        "--browser",
+        choices=["firefox", "chromium"],
+        default="firefox",
+        help="Motor do navegador para Playwright (padrão: firefox, consistente com a origem dos cookies no Nightly).",
     )
     parser.add_argument(
         "--itens",
@@ -183,42 +190,10 @@ def main():
     t_global_start = time.time()
 
     with sync_playwright() as p:
-        launch_args = [
-            "--disable-blink-features=AutomationControlled",
-            "--no-sandbox",
-            "--disable-infobars",
-            "--disable-dev-shm-usage",
-        ]
-        browser = p.chromium.launch(headless=headless_mode, args=launch_args)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            locale="pt-BR",
-            viewport={"width": 1280, "height": 800},
+        browser_choice = getattr(args, "browser", "firefox")
+        browser, context = create_stealth_browser_context(
+            p, cookies, browser_choice=browser_choice, headless=headless_mode
         )
-        context.add_cookies(cookies)
-
-        # Injeta evasões anti-detecção
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            });
-            window.chrome = {
-                runtime: {},
-                loadTimes: function() {},
-                csi: function() {},
-                app: {}
-            };
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => [
-                    { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
-                    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' }
-                ]
-            });
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['pt-BR', 'pt', 'en-US', 'en']
-            });
-        """)
-
         page = context.new_page()
 
         # Aceita eventuais caixas de diálogo inesperadas para não travar o fluxo

@@ -146,6 +146,100 @@ def human_click(locator, page, fast=False):
     locator.click()
 
 
+def prepare_stealth_images(images):
+    """
+    Gera cópias limpas e com hash perceptual único das fotos.
+    Elimina metadados EXIF antigos e varia sutilmente a compressão JPEG (qualidade 93-96)
+    e micro-crop de 1 pixel, evitando que o algoritmo de detecção de spam da Meta
+    identifique 'repost de imagem duplicada' de anúncio recém-excluído.
+    """
+    temp_paths = []
+    temp_dir = os.path.join(os.environ.get("TEMP", "."), "fb_stealth_images")
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+    except Exception:
+        pass
+
+    for idx, img_path in enumerate(images):
+        if not os.path.exists(img_path):
+            continue
+        try:
+            from PIL import Image
+            with Image.open(img_path) as im:
+                im_clean = im.convert("RGB")
+                w, h = im_clean.size
+
+                # Micro-variação imperceptível de 1 pixel
+                dx = random.choice([0, 1]) if w > 50 else 0
+                dy = random.choice([0, 1]) if h > 50 else 0
+                if dx or dy:
+                    im_clean = im_clean.crop((dx, dy, w, h))
+
+                out_filename = f"stealth_{idx}_{uuid.uuid4().hex[:6]}.jpg"
+                out_path = os.path.join(temp_dir, out_filename)
+                quality = random.randint(93, 96)
+                im_clean.save(out_path, "JPEG", quality=quality, optimize=True)
+                temp_paths.append(out_path)
+        except Exception:
+            temp_paths.append(img_path)
+
+    return temp_paths if temp_paths else images
+
+
+def create_stealth_browser_context(playwright_instance, cookies, browser_choice="firefox", headless=True):
+    """
+    Inicializa o navegador com perfil anti-detecção consistente com a origem dos cookies (Firefox Nightly).
+    Por padrão utiliza o motor Firefox (Gecko), garantindo que o handshake TLS, cabeçalhos
+    e assinaturas de rede coincidam perfeitamente com a sessão gerada no Firefox Nightly,
+    evitando que a Meta acione o alerta de 'Sessão sequestrada / conta hackeada'.
+    """
+    choice = (browser_choice or "firefox").lower()
+    if choice == "firefox":
+        firefox_user_prefs = {
+            "dom.webdriver.enabled": False,
+            "useAutomationExtension": False,
+            "privacy.resistFingerprinting": False,
+        }
+        browser = playwright_instance.firefox.launch(
+            headless=headless,
+            firefox_user_prefs=firefox_user_prefs
+        )
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0",
+            locale="pt-BR",
+            viewport={"width": 1366, "height": 768}
+        )
+        context.add_cookies(cookies)
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            try { delete Object.getPrototypeOf(navigator).webdriver; } catch(e) {}
+            Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+            Object.defineProperty(screen, 'colorDepth', { get: () => 24 });
+            Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
+        """)
+        return browser, context
+    else:  # Chromium
+        launch_args = [
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox",
+            "--disable-infobars",
+            "--disable-dev-shm-usage"
+        ]
+        browser = playwright_instance.chromium.launch(headless=headless, args=launch_args)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            locale="pt-BR",
+            viewport={"width": 1366, "height": 768}
+        )
+        context.add_cookies(cookies)
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            try { delete Object.getPrototypeOf(navigator).webdriver; } catch(e) {}
+            Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
+        """)
+        return browser, context
+
+
 def find_marketplace_base_dir():
     """Identifica o diretório raiz do experimento Marketplace."""
     curr = os.path.abspath(os.getcwd())
@@ -564,13 +658,14 @@ def publish_new_ad(page, item_data, fast=False):
             "    👉 Como resolver: Abra o Firefox Nightly (ou use --login), faça login em https://www.facebook.com/ e execute o script novamente."
         )
 
-    # 1. Upload de Imagens
-    print(f"\n[+] Fazendo upload de {len(images)} imagens...")
+    # 1. Upload de Imagens com variação stealth anti-duplicação
+    stealth_images = prepare_stealth_images(images) if not fast else images
+    print(f"\n[+] Fazendo upload de {len(stealth_images)} imagens (com proteção anti-duplicação de imagem)...")
     file_input = page.locator('input[type="file"]').first
-    file_input.set_input_files(images)
+    file_input.set_input_files(stealth_images)
     for idx, img_path in enumerate(images, start=1):
         print(f"  ✓ [{idx}/{len(images)}] {os.path.basename(img_path)}")
-    human_delay(3.0, 5.0, "Processando prévia das fotos no Facebook", fast=fast)
+    human_delay(3.5, 6.0, "Processando prévia das fotos no Facebook", fast=fast)
 
     # 2. Preenchimento de Título e Preço
     print(f"  ✓ Preenchendo Título: '{title}'")
@@ -749,7 +844,14 @@ def publish_new_ad(page, item_data, fast=False):
         else:
             print("  [!] Aviso: Chave 'Ocultar para os amigos' não encontrada no formulário.")
 
-    human_delay(2.5, 4.0, "Revisando dados preenchidos", fast=fast)
+    human_delay(3.0, 5.5, "Revisando dados preenchidos", fast=fast)
+    if not fast:
+        try:
+            page.mouse.wheel(0, random.randint(150, 300))
+            time.sleep(random.uniform(0.4, 0.8))
+            page.mouse.wheel(0, -random.randint(150, 300))
+        except Exception:
+            pass
 
     # 12. Avançar para a tela de confirmação/grupos
     print("\n[5/5] Finalizando e publicando anúncio no Marketplace...")
@@ -775,9 +877,19 @@ def publish_new_ad(page, item_data, fast=False):
     if pub_btn.count() == 0 or not pub_btn.is_enabled():
         raise RuntimeError("Botão 'Publicar/Postar' não encontrado ou desabilitado na etapa final.")
 
+    human_delay(3.5, 6.0, "Conferência final da tela de grupos", fast=fast)
     human_click(pub_btn, page, fast=fast)
     print("  ⏳ Submetendo anúncio (aguardando confirmação do Facebook)...")
     page.wait_for_timeout(8000)
+
+    # Limpeza de imagens temporárias stealth
+    if stealth_images != images:
+        for s_path in stealth_images:
+            try:
+                if "fb_stealth_images" in s_path and os.path.exists(s_path):
+                    os.remove(s_path)
+            except Exception:
+                pass
 
     print("  ✓ Anúncio publicado com sucesso!")
 
@@ -791,6 +903,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Apenas preencher o formulário sem excluir ou publicar")
     parser.add_argument("--headed", action="store_true", help="Executar com janela do navegador visível")
     parser.add_argument("--fast", action="store_true", help="Desativar pausas humanizadas (modo rápido)")
+    parser.add_argument("--browser", choices=["firefox", "chromium"], default="firefox", help="Motor do navegador para Playwright (padrão: firefox, compatível com os cookies do Nightly)")
     args = parser.parse_args()
 
     if args.login:
@@ -821,42 +934,8 @@ def main():
     headless_mode = not args.headed
 
     with sync_playwright() as p:
-        launch_args = [
-            "--disable-blink-features=AutomationControlled",
-            "--no-sandbox",
-            "--disable-infobars",
-            "--disable-dev-shm-usage"
-        ]
-        browser = p.chromium.launch(headless=headless_mode, args=launch_args)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            locale="pt-BR",
-            viewport={"width": 1280, "height": 800}
-        )
-        context.add_cookies(cookies)
-
-        # Injeta evasões anti-detecção de bot / webdriver
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            });
-            window.chrome = {
-                runtime: {},
-                loadTimes: function() {},
-                csi: function() {},
-                app: {}
-            };
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => [
-                    { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
-                    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' }
-                ]
-            });
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['pt-BR', 'pt', 'en-US', 'en']
-            });
-        """)
-
+        browser_choice = getattr(args, "browser", "firefox")
+        browser, context = create_stealth_browser_context(p, cookies, browser_choice=browser_choice, headless=headless_mode)
         page = context.new_page()
 
         # 2. Localizar anúncio antigo

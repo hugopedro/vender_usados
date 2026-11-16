@@ -421,18 +421,26 @@ def get_scraper():
 
 
 def fetch_published_ads(scraper, cookies):
-    """Busca a lista de anúncios publicados na conta."""
+    """Busca a lista de anúncios publicados na conta com tentativas automáticas."""
     headers = {
         "Accept": "application/json, text/plain, */*",
         "Referer": "https://conta.olx.com.br/",
         "Origin": "https://conta.olx.com.br",
         "X-OLX-TEAM-KEY": TEAM_KEY_MYDATA
     }
-    resp = scraper.get(URL_LIST_ADS, headers=headers, cookies=cookies, timeout=15)
-    if resp.status_code != 200:
-        raise RuntimeError(f"Falha ao consultar anúncios publicados (HTTP {resp.status_code}): {resp.text[:200]}")
-    data = resp.json()
-    return data.get("ads", [])
+    last_err = None
+    for attempt in range(1, 4):
+        try:
+            resp = scraper.get(URL_LIST_ADS, headers=headers, cookies=cookies, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("ads", [])
+            last_err = f"HTTP {resp.status_code}: {resp.text[:200]}"
+        except Exception as e:
+            last_err = str(e)
+        if attempt < 3:
+            time.sleep(1.5 * attempt)
+    raise RuntimeError(f"Falha ao consultar anúncios publicados após 3 tentativas: {last_err}")
 
 
 def match_ad(ads, item_key):

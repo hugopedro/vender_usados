@@ -229,13 +229,17 @@ def main():
         print("[ERRO]: Nenhum item válido selecionado para republicação.", file=sys.stderr)
         sys.exit(1)
 
+    titulo_lote = "REPUBLICADOR EM LOTE - OLX (COM CELULAR)" if args.incluir_celular else "REPUBLICADOR EM LOTE - OLX (SEM CELULAR)"
     print("=" * 72)
-    print("         REPUBLICADOR EM LOTE - OLX (SEM CELULAR)")
+    print(f"         {titulo_lote}")
     print("=" * 72)
     print(f"Modo: {'DRY-RUN (Simulação)' if args.dry_run else 'EXECUÇÃO REAL (Sem confirmações)'}")
     print(f"Itens na fila ({len(itens_selecionados)}): {', '.join([i.upper() for i in itens_selecionados])}")
     print(f"Intervalo de segurança entre anúncios: {args.delay_min}s a {args.delay_max}s")
-    print("Nota: O Celular está excluído deste lote para proteger a cota mensal.")
+    if not args.incluir_celular:
+        print("Nota: O Celular está excluído deste lote para proteger a cota mensal.")
+    else:
+        print("Nota: O Celular foi incluído expressamente neste lote.")
     print("=" * 72)
 
     # 1. Carregar sessão e cookies do Firefox Nightly
